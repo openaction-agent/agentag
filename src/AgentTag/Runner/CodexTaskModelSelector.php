@@ -5,6 +5,8 @@ namespace App\AgentTag\Runner;
 use App\AgentTag\Configuration\AgentTagSettings;
 use Psr\Log\LoggerInterface;
 
+use function Symfony\Component\String\u;
+
 final readonly class CodexTaskModelSelector implements TaskModelSelector
 {
     public function __construct(
@@ -29,13 +31,16 @@ Honor an explicit request for a model or route. When only a model is requested, 
 Routing:
 - Stop/cancel, ping, health/model/skills check, or simple confirmation: luna-medium.
 - Genuinely simple or deterministic work, excluding coding tasks, including linear status, assignment, labels, comments, or writing: luna-xhigh.
-- Always use terra-high, and no other route, for OpenAction MCP work, including manipulation and information retrieval.
-- Default for routine agentic, product behavior questions, multi-step tool work, and functional testing: terra-high.
-- Default for coding tasks, including specification writing, implementation, PR reviews, and technical diagnostics/debugging: terra-max.
+- OpenAction MCP manipulation or information retrieval that is not part of a coding task: terra-high.
+- Default for routine agentic, product behavior questions, and multi-step tool work: terra-high.
+- Functional testing: sol-high.
+- Default for coding tasks, including specification writing, implementation, PR reviews, and technical diagnostics/debugging: sol-high.
 - Security-sensitive, architectural, high-blast-radius, highly ambiguous, uncertain, or exceptionally difficult/complex work: sol-xhigh.
 
 Rules:
-- Except for the OpenAction MCP rule above, multiple files, tool calls, MCP calls, and arithmetic do not alone justify escalation.
+- Apply the routes in this precedence order: explicit model request, sol-xhigh risk, coding or functional testing, OpenAction MCP-only work, then the remaining defaults.
+- Coding and functional-testing routes override tool-based routes. In particular, $implement-issue and any request to implement a Linear issue are coding tasks and must use sol-high even though they also use Linear, GitHub, or other OpenAction MCP tools.
+- Multiple files, tool calls, MCP calls, and arithmetic do not alone justify escalation.
 - Escalate from Luna only when the work meets a Terra or Sol condition above; use Sol when the discovered risk meets a Sol condition.
 
 Return only the JSON object required by the output schema. Keep selection_reason concise and in the same language as the request when it is French or English.
@@ -103,6 +108,7 @@ PROMPT;
                         'terra-xhigh',
                         'terra-max',
                         'sol-medium',
+                        'sol-high',
                         'sol-xhigh',
                     ],
                 ],
@@ -115,7 +121,7 @@ PROMPT;
 
     private function parse(string $output): ?TaskModelSelection
     {
-        $data = json_decode(trim($output), true);
+        $data = json_decode(u($output)->trim()->toString(), true);
         if (!is_array($data)) {
             return null;
         }

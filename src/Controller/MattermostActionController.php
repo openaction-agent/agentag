@@ -16,6 +16,8 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Attribute\Route;
 
+use function Symfony\Component\String\u;
+
 final class MattermostActionController extends AbstractController
 {
     #[Route('/integrations/mattermost/action', name: 'agentag_mattermost_action', methods: ['POST'])]
@@ -121,8 +123,8 @@ final class MattermostActionController extends AbstractController
 
     private function technicalLog(AgentRun $run): string
     {
-        $log = trim($run->logSummary() ?? 'No technical log has been recorded yet.');
+        $log = u($run->logSummary() ?? 'No technical log has been recorded yet.')->trim()->toString();
 
-        return "Technical log for task #{$run->id()}:\n```\n".substr($log, 0, 3200)."\n```";
+        return "Technical log for task #{$run->id()}:\n```\n".u($log)->slice(0, 3200)."\n```";
     }
 }

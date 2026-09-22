@@ -7,6 +7,8 @@ use Symfony\Contracts\HttpClient\Exception\DecodingExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
+use function Symfony\Component\String\u;
+
 final readonly class MattermostApiThreadRootResolver implements MattermostThreadRootResolver
 {
     public function __construct(
@@ -53,12 +55,12 @@ final readonly class MattermostApiThreadRootResolver implements MattermostThread
         }
 
         $rootId = $payload['root_id'] ?? null;
-        if (is_string($rootId) && '' !== trim($rootId)) {
-            return trim($rootId);
+        if (is_string($rootId) && '' !== u($rootId)->trim()->toString()) {
+            return u($rootId)->trim()->toString();
         }
 
         $postId = $payload['id'] ?? null;
 
-        return is_string($postId) && '' !== trim($postId) ? trim($postId) : $event->postId();
+        return is_string($postId) && '' !== u($postId)->trim()->toString() ? u($postId)->trim()->toString() : $event->postId();
     }
 }

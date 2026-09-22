@@ -2,6 +2,8 @@
 
 namespace App\AgentTag\Agent;
 
+use function Symfony\Component\String\u;
+
 final readonly class AgentProfile
 {
     public function __construct(
@@ -11,7 +13,7 @@ final readonly class AgentProfile
         private string $runnerMode,
         private int $timeoutSeconds,
     ) {
-        if ('' === trim($name)) {
+        if ('' === u($name)->trim()->toString()) {
             throw new \InvalidArgumentException('Agent profile name must not be blank.');
         }
 

@@ -10,6 +10,8 @@ use App\Entity\RunEvent;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 
+use function Symfony\Component\String\u;
+
 final readonly class AgentRunOrchestrator
 {
     public function __construct(
@@ -155,11 +157,11 @@ final readonly class AgentRunOrchestrator
 
     private function logSummary(AgentRunnerResult $result): string
     {
-        return trim(sprintf(
+        return u(sprintf(
             "stdout: %s\nstderr: %s",
             $result->stdout(),
             $result->stderr(),
-        ));
+        ))->trim()->toString();
     }
 
     private function interruptionRequested(AgentRun $run): bool

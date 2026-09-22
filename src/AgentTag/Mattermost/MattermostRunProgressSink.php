@@ -10,6 +10,8 @@ use App\Entity\AgentRun;
 use App\Entity\RunEvent;
 use Doctrine\ORM\EntityManagerInterface;
 
+use function Symfony\Component\String\u;
+
 final class MattermostRunProgressSink implements AgentRunnerProgressSink
 {
     private int $lastUpdatedAt = 0;
@@ -117,7 +119,7 @@ final class MattermostRunProgressSink implements AgentRunnerProgressSink
             return;
         }
 
-        $message = trim($this->run->outputSummary() ?? '');
+        $message = u($this->run->outputSummary() ?? '')->trim()->toString();
         if ('' === $message) {
             $message = AgentRun::STATUS_COMPLETED === $this->run->status()
                 ? 'Task completed.'
@@ -178,9 +180,9 @@ final class MattermostRunProgressSink implements AgentRunnerProgressSink
 
     private function stage(string $message): string
     {
-        $message = trim(preg_replace('/\s+/', ' ', $message) ?? $message);
-        $sentence = preg_split('/(?<=[.!?])\s+/', $message, 2)[0] ?? $message;
+        $message = u($message)->replaceMatches('/\s+/', ' ')->trim()->toString();
+        $sentence = u($message)->split('/(?<=[.!?])\s+/', 2, 0)[0]->toString();
 
-        return substr($sentence, 0, 240);
+        return u($sentence)->slice(0, 240)->toString();
     }
 }

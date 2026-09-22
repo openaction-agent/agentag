@@ -2,6 +2,8 @@
 
 namespace App\AgentTag\Chat;
 
+use function Symfony\Component\String\u;
+
 final readonly class ChatSessionReference
 {
     public function __construct(
@@ -13,7 +15,7 @@ final readonly class ChatSessionReference
 
     public function key(): string
     {
-        return implode(':', ['mattermost', $this->teamId, $this->channelId, $this->threadId]);
+        return u(':')->join(['mattermost', $this->teamId, $this->channelId, $this->threadId])->toString();
     }
 
     public function teamId(): string

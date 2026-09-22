@@ -17,6 +17,8 @@ use Symfony\Component\Routing\RequestContext;
 use Symfony\Component\Routing\Route;
 use Symfony\Component\Routing\RouteCollection;
 
+use function Symfony\Component\String\u;
+
 final class MattermostRunProgressSinkTest extends TestCase
 {
     public function testItUpdatesOneTaskCardFromMeaningfulAgentMessages(): void
@@ -29,8 +31,8 @@ final class MattermostRunProgressSinkTest extends TestCase
         $sink->onProgress(new AgentRunnerProgress('agent_message', 'Reproduced three billing test failures. I am tracing rounding now.'));
 
         self::assertCount(1, $notifier->updatedPosts);
-        foreach (explode("\n", $notifier->updatedPosts[0]) as $line) {
-            self::assertStringStartsWith('> ', $line);
+        foreach (u($notifier->updatedPosts[0])->split("\n") as $line) {
+            self::assertStringStartsWith('> ', $line->toString());
         }
         self::assertStringContainsString('Reproduced three billing test failures.', $notifier->updatedPosts[0]);
         self::assertStringContainsString('Model: **GPT-5.6 Luna · max**', $notifier->updatedPosts[0]);
@@ -92,7 +94,7 @@ final class MattermostRunProgressSinkTest extends TestCase
         self::assertStringNotContainsString('428 tests passed', $notifier->updatedPosts[0]);
         self::assertSame([], $notifier->updatedProps[0]['attachments']);
         self::assertSame(["Cause\nRounding order.\n\nVerification\n• 428 tests passed"], $notifier->createdMessages);
-        self::assertFalse(str_starts_with($notifier->createdMessages[0], '> '));
+        self::assertFalse(u($notifier->createdMessages[0])->startsWith('> '));
         self::assertSame('answer-post', $run->answerPostId());
     }
 
@@ -108,7 +110,7 @@ final class MattermostRunProgressSinkTest extends TestCase
         $run->recordRunnerResult(AgentRun::STATUS_COMPLETED, 'Report generated.', '', '/tmp/workspace', [[
             'path' => $path,
             'name' => 'report.csv',
-            'size' => strlen($contents),
+            'size' => (int) filesize($path),
             'sha256' => hash('sha256', $contents),
         ]], 0, null);
         $sink = $this->sink($notifier, $run);

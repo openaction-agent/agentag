@@ -2,6 +2,8 @@
 
 namespace App\AgentTag\Configuration;
 
+use function Symfony\Component\String\u;
+
 final readonly class AgentTagSettings
 {
     public function __construct(
@@ -20,7 +22,7 @@ final readonly class AgentTagSettings
         if ($runTimeoutSeconds < 1) {
             throw new \InvalidArgumentException('AgentTag run timeout must be a positive integer.');
         }
-        if ('' === trim($modelSelectionModel)) {
+        if ('' === u($modelSelectionModel)->trim()->toString()) {
             throw new \InvalidArgumentException('AgentTag model-selection model must not be blank.');
         }
         if ($modelSelectionTimeoutSeconds < 1 || $taskDeadlineSeconds < 1 || $maxRetries < 0 || $retryDelaySeconds < 1) {
@@ -85,13 +87,13 @@ final readonly class AgentTagSettings
 
     private function assertAbsolutePath(string $path, string $label): void
     {
-        if (!str_starts_with($path, '/')) {
+        if (!u($path)->startsWith('/')) {
             throw new \InvalidArgumentException(sprintf('AgentTag %s must be absolute, got "%s".', $label, $path));
         }
     }
 
     private function normalizePath(string $path): string
     {
-        return rtrim($path, '/');
+        return u($path)->trimEnd('/')->toString();
     }
 }

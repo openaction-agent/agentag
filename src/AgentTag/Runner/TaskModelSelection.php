@@ -2,6 +2,8 @@
 
 namespace App\AgentTag\Runner;
 
+use function Symfony\Component\String\u;
+
 final readonly class TaskModelSelection
 {
     /** @var array<string, array{model: string, effort: string, display: string}> */
@@ -15,6 +17,7 @@ final readonly class TaskModelSelection
         'terra-xhigh' => ['model' => 'gpt-5.6-terra', 'effort' => 'xhigh', 'display' => 'GPT-5.6 Terra'],
         'terra-max' => ['model' => 'gpt-5.6-terra', 'effort' => 'max', 'display' => 'GPT-5.6 Terra'],
         'sol-medium' => ['model' => 'gpt-5.6-sol', 'effort' => 'medium', 'display' => 'GPT-5.6 Sol'],
+        'sol-high' => ['model' => 'gpt-5.6-sol', 'effort' => 'high', 'display' => 'GPT-5.6 Sol'],
         'sol-xhigh' => ['model' => 'gpt-5.6-sol', 'effort' => 'xhigh', 'display' => 'GPT-5.6 Sol'],
     ];
 
@@ -29,8 +32,8 @@ final readonly class TaskModelSelection
 
     public static function fromRoute(string $route, string $reason): ?self
     {
-        $route = strtolower(trim($route));
-        $reason = trim(preg_replace('/\s+/', ' ', $reason) ?? $reason);
+        $route = u($route)->trim()->lower()->toString();
+        $reason = u($reason)->replaceMatches('/\s+/', ' ')->trim()->toString();
         $configuration = self::ROUTES[$route] ?? null;
         if (null === $configuration || '' === $reason) {
             return null;
@@ -41,7 +44,7 @@ final readonly class TaskModelSelection
             $configuration['model'],
             $configuration['effort'],
             $configuration['display'],
-            substr($reason, 0, 240),
+            u($reason)->slice(0, 240)->toString(),
         );
     }
 

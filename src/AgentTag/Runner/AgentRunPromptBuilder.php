@@ -4,6 +4,8 @@ namespace App\AgentTag\Runner;
 
 use App\Entity\AgentRun;
 
+use function Symfony\Component\String\u;
+
 final readonly class AgentRunPromptBuilder
 {
     public function build(AgentRun $run, ?string $steering = null): string
@@ -16,7 +18,7 @@ final readonly class AgentRunPromptBuilder
             )
             : $this->resumeContext($run, $steering);
 
-        return trim(<<<PROMPT
+        return u(<<<PROMPT
 You are AgentTag running a durable task inside an isolated session workspace.
 
 Interaction rules:
@@ -41,7 +43,7 @@ Durable continuation protocol:
 - Use 30 to 86400 seconds. Do not emit this comment when the task is complete or needs user input.
 
 {$continuation}
-PROMPT);
+PROMPT)->trim()->toString();
     }
 
     private function resumeContext(AgentRun $run, ?string $steering): string
@@ -52,12 +54,12 @@ PROMPT);
         if (null !== $run->waitReason()) {
             $lines[] = 'Scheduled wake reason: '.$run->waitReason();
         }
-        if (null !== $steering && '' !== trim($steering)) {
-            $lines[] = "New user steering:\n".trim($steering);
+        if (null !== $steering && '' !== u($steering)->trim()->toString()) {
+            $lines[] = "New user steering:\n".u($steering)->trim();
         } else {
             $lines[] = 'Re-check the pending external state and continue from the last completed stage.';
         }
 
-        return implode("\n\n", $lines);
+        return u("\n\n")->join($lines)->toString();
     }
 }

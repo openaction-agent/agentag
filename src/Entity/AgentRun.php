@@ -505,16 +505,16 @@ class AgentRun
     {
         $fileId = $this->mattermostFileIds[$artifactKey] ?? null;
 
-        return is_string($fileId) && '' !== trim($fileId) ? $fileId : null;
+        return is_string($fileId) && '' !== u($fileId)->trim()->toString() ? $fileId : null;
     }
 
     public function recordMattermostFileId(string $artifactKey, string $fileId): void
     {
-        if ('' === trim($artifactKey) || '' === trim($fileId)) {
+        if ('' === u($artifactKey)->trim()->toString() || '' === u($fileId)->trim()->toString()) {
             return;
         }
 
-        $this->mattermostFileIds[$artifactKey] = trim($fileId);
+        $this->mattermostFileIds[$artifactKey] = u($fileId)->trim()->toString();
     }
 
     public function changeNotificationPreference(string $preference): void
@@ -541,7 +541,7 @@ class AgentRun
 
     public function updateStage(string $stage): void
     {
-        $stage = trim(preg_replace('/\s+/', ' ', $stage) ?? $stage);
+        $stage = u($stage)->replaceMatches('/\s+/', ' ')->trim()->toString();
         if ('' === $stage || $stage === $this->currentStage) {
             return;
         }
@@ -549,7 +549,7 @@ class AgentRun
         if (null !== $this->currentStage && !in_array($this->currentStage, $this->completedStages, true)) {
             $this->completedStages[] = $this->currentStage;
         }
-        $this->currentStage = substr($stage, 0, 240);
+        $this->currentStage = u($stage)->slice(0, 240)->toString();
     }
 
     public function requestCancellation(?string $stoppedByName = null): void
@@ -558,9 +558,9 @@ class AgentRun
             return;
         }
 
-        $stoppedByName = ltrim(trim($stoppedByName ?? ''), '@');
+        $stoppedByName = u($stoppedByName ?? '')->trim()->trimStart('@')->toString();
         if ('' !== $stoppedByName) {
-            $this->stoppedByName = mb_substr($stoppedByName, 0, 120);
+            $this->stoppedByName = u($stoppedByName)->slice(0, 120)->toString();
         }
 
         if (!in_array($this->status, [self::STATUS_RUNNING, self::STATUS_INTERRUPT_REQUESTED], true)) {
@@ -576,7 +576,7 @@ class AgentRun
 
     public function requestSteering(string $instruction): void
     {
-        $instruction = trim($instruction);
+        $instruction = u($instruction)->trim()->toString();
         if ('' === $instruction || (self::STATUS_INTERRUPT_REQUESTED === $this->status && self::INTERRUPT_CANCEL === $this->interruptionKind)) {
             return;
         }
@@ -599,7 +599,7 @@ class AgentRun
 
     public function prepareRetry(string $instruction): void
     {
-        $this->pendingSteering = trim($instruction);
+        $this->pendingSteering = u($instruction)->trim()->toString();
         $this->status = self::STATUS_ACCEPTED;
         $this->answerPostId = null;
         $this->finishedAt = null;

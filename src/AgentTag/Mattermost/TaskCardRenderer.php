@@ -5,6 +5,8 @@ namespace App\AgentTag\Mattermost;
 use App\Entity\AgentRun;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
+use function Symfony\Component\String\u;
+
 final readonly class TaskCardRenderer
 {
     public function __construct(
@@ -34,7 +36,7 @@ final readonly class TaskCardRenderer
             $this->modelLine($run),
         ];
         if ($run->cancellationRequested() && null !== $run->stoppedByName()) {
-            $lines[] = 'Stop requested by @'.ltrim($run->stoppedByName(), '@').'.';
+            $lines[] = 'Stop requested by @'.u($run->stoppedByName())->trimStart('@').'.';
         }
         $lines[] = '';
 
@@ -44,7 +46,7 @@ final readonly class TaskCardRenderer
         $lines[] = '→ '.$currentStage;
         $lines[] = '○ Complete task and verify results';
 
-        return implode("\n", $lines);
+        return u("\n")->join($lines)->toString();
     }
 
     private function completed(AgentRun $run): string
@@ -61,14 +63,14 @@ final readonly class TaskCardRenderer
     {
         $stoppedBy = null === $run->stoppedByName()
             ? null
-            : 'Stopped by @'.ltrim($run->stoppedByName(), '@').'.';
+            : 'Stopped by @'.u($run->stoppedByName())->trimStart('@').'.';
         if (AgentRun::WORKSPACE_CLEANUP_CLEANED === $run->workspaceCleanupState()) {
             return $this->finishedTimeline(
                 $run,
                 '⏹️',
                 'stopped after '.$this->duration($run),
                 '■ Stopped',
-                implode("\n", array_values(array_filter([$stoppedBy, 'Workspace discarded.']))),
+                u("\n")->join(array_values(array_filter([$stoppedBy, 'Workspace discarded.'])))->toString(),
             );
         }
 
@@ -77,10 +79,10 @@ final readonly class TaskCardRenderer
             '⏹️',
             'stopped after '.$this->duration($run),
             '■ Stopped',
-            implode("\n", array_values(array_filter([
+            u("\n")->join(array_values(array_filter([
                 $stoppedBy,
                 sprintf('Workspace preserved until %s.', $run->retainedUntil()?->format('Y-m-d H:i \U\T\C') ?? 'the retention window expires'),
-            ]))),
+            ])))->toString(),
         );
     }
 
@@ -102,7 +104,7 @@ final readonly class TaskCardRenderer
             $lines[] = $note;
         }
 
-        return implode("\n", $lines);
+        return u("\n")->join($lines)->toString();
     }
 
     private function modelLine(AgentRun $run): string
@@ -118,7 +120,7 @@ final readonly class TaskCardRenderer
 
     private function blockquote(string $message): string
     {
-        return implode("\n", array_map(static fn (string $line): string => '> '.$line, explode("\n", $message)));
+        return u($message)->replace("\n", "\n> ")->prepend('> ')->toString();
     }
 
     /** @return array<string, mixed> */
@@ -152,7 +154,7 @@ final readonly class TaskCardRenderer
     {
         $name = $run->requesterName() ?? $run->requesterId() ?? 'unknown';
 
-        return '@'.ltrim($name, '@');
+        return '@'.u($name)->trimStart('@');
     }
 
     private function relativeStart(AgentRun $run): string
@@ -181,6 +183,6 @@ final readonly class TaskCardRenderer
 
     private function truncate(string $message): string
     {
-        return strlen($message) <= 4000 ? $message : rtrim(substr($message, 0, 3997)).'...';
+        return u($message)->length() <= 4000 ? $message : u($message)->slice(0, 3997)->trimEnd()->append('...')->toString();
     }
 }

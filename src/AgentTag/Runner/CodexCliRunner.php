@@ -15,7 +15,7 @@ final readonly class CodexCliRunner implements AgentRunnerInterface
     #[\Override]
     public function run(AgentRunnerInput $input): AgentRunnerResult
     {
-        if ('' === trim($input->model())) {
+        if ('' === u($input->model())->trim()->toString()) {
             throw new \InvalidArgumentException('Codex task model must not be blank.');
         }
         if (!in_array($input->reasoningEffort(), ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra'], true)) {
@@ -70,8 +70,8 @@ final readonly class CodexCliRunner implements AgentRunnerInterface
         $reportedSessionId = $input->resumeSessionId();
         $callback = function (string $type, string $buffer) use ($input, $parser, &$reportedSessionId): void {
             $progressEvents = match (true) {
-                'out' === $type || str_ends_with($type, 'OUT') => $parser->consume($buffer),
-                'err' === $type || str_ends_with($type, 'ERR') => $parser->consumeStderr($buffer),
+                'out' === $type || u($type)->endsWith('OUT') => $parser->consume($buffer),
+                'err' === $type || u($type)->endsWith('ERR') => $parser->consumeStderr($buffer),
                 default => [],
             };
             foreach ($progressEvents as $progress) {
@@ -152,7 +152,7 @@ PROMPT;
     private function finalMessage(string $lastMessagePath, string $stdout, int $exitCode, CodexJsonEventParser $parser): string
     {
         if (is_file($lastMessagePath)) {
-            $message = trim((string) file_get_contents($lastMessagePath));
+            $message = u((string) file_get_contents($lastMessagePath))->trim()->toString();
             if ('' !== $message) {
                 return $message;
             }
@@ -163,7 +163,7 @@ PROMPT;
             return $message;
         }
 
-        $stdout = trim($stdout);
+        $stdout = u($stdout)->trim()->toString();
         if ('' === $stdout) {
             return 0 === $exitCode
                 ? 'Run completed, but Codex did not provide a final message.'
@@ -181,8 +181,8 @@ PROMPT;
 
     private function looksLikeJsonEventOutput(string $stdout): bool
     {
-        foreach (explode("\n", $stdout) as $line) {
-            $line = trim($line);
+        foreach (u($stdout)->split("\n") as $line) {
+            $line = $line->trim()->toString();
             if ('' === $line) {
                 continue;
             }
@@ -203,8 +203,8 @@ PROMPT;
 
     private function tokenUsageFromOutput(string $stdout): ?TokenUsage
     {
-        foreach (explode("\n", $stdout) as $line) {
-            $data = json_decode($line, true);
+        foreach (u($stdout)->split("\n") as $line) {
+            $data = json_decode($line->toString(), true);
             if (!is_array($data)) {
                 continue;
             }

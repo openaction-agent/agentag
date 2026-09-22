@@ -4,6 +4,8 @@ namespace App\AgentTag\Runner;
 
 use Psr\Log\LoggerInterface;
 
+use function Symfony\Component\String\u;
+
 final readonly class ReplyArtifactCollector
 {
     public const DIRECTORY = 'reply-files';
@@ -31,7 +33,7 @@ final readonly class ReplyArtifactCollector
 
         $artifacts = [];
         foreach ($entries as $name) {
-            if ('.' === $name || '..' === $name || str_starts_with($name, '.') || str_ends_with($name, '.part') || str_ends_with($name, '.tmp')) {
+            if ('.' === $name || '..' === $name || u($name)->startsWith('.') || u($name)->endsWith(['.part', '.tmp'])) {
                 continue;
             }
 
@@ -39,7 +41,7 @@ final readonly class ReplyArtifactCollector
             $resolvedPath = realpath($path);
             $stat = lstat($path);
             if (false === $resolvedPath
-                || !str_starts_with($resolvedPath, $resolvedDirectory.'/')
+                || !u($resolvedPath)->startsWith($resolvedDirectory.'/')
                 || false === $stat
                 || is_link($path)
                 || !is_file($resolvedPath)

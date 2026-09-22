@@ -4,6 +4,8 @@ namespace App\AgentTag\Mattermost;
 
 use Symfony\Component\HttpFoundation\Request;
 
+use function Symfony\Component\String\u;
+
 final readonly class MattermostPayloadParser
 {
     public function parse(Request $request): MattermostInboundEvent
@@ -29,7 +31,7 @@ final readonly class MattermostPayloadParser
      */
     private function payload(Request $request): array
     {
-        if (str_contains((string) $request->headers->get('content-type'), 'application/json')) {
+        if (u((string) $request->headers->get('content-type'))->containsAny('application/json')) {
             $payload = json_decode($request->getContent(), true);
             if (!is_array($payload)) {
                 throw new \InvalidArgumentException('Mattermost webhook payload must be a JSON object.');
@@ -83,6 +85,6 @@ final readonly class MattermostPayloadParser
             throw new \InvalidArgumentException(sprintf('Mattermost webhook field "%s" must be scalar.', $key));
         }
 
-        return trim((string) $value);
+        return u((string) $value)->trim()->toString();
     }
 }

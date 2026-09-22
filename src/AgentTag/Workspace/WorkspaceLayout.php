@@ -2,6 +2,8 @@
 
 namespace App\AgentTag\Workspace;
 
+use function Symfony\Component\String\u;
+
 final readonly class WorkspaceLayout
 {
     public function __construct(
@@ -32,7 +34,7 @@ final readonly class WorkspaceLayout
 
     public function sessionPath(string $sessionKey): string
     {
-        return $this->runsPath().'/session-'.substr(sha1($sessionKey), 0, 16);
+        return $this->runsPath().'/session-'.u(sha1($sessionKey))->slice(0, 16)->toString();
     }
 
     public function artifactsPath(string $runId): string
@@ -47,19 +49,19 @@ final readonly class WorkspaceLayout
 
     private function assertAbsolutePath(string $path, string $label): void
     {
-        if (!str_starts_with($path, '/')) {
+        if (!u($path)->startsWith('/')) {
             throw new \InvalidArgumentException(sprintf('AgentTag %s must be absolute, got "%s".', $label, $path));
         }
     }
 
     private function normalize(string $path): string
     {
-        return rtrim($path, '/');
+        return u($path)->trimEnd('/')->toString();
     }
 
     private function safeSegment(string $segment): string
     {
-        if ('' === $segment || str_contains($segment, '/') || str_contains($segment, '..')) {
+        if ('' === $segment || u($segment)->containsAny(['/', '..'])) {
             throw new \InvalidArgumentException(sprintf('Invalid workspace path segment "%s".', $segment));
         }
 

@@ -14,6 +14,8 @@ use App\Message\RunAgentRunMessage;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\MessageBusInterface;
 
+use function Symfony\Component\String\u;
+
 final readonly class MattermostInteractionHandler
 {
     public function __construct(
@@ -162,12 +164,12 @@ final readonly class MattermostInteractionHandler
 
     private function instruction(string $text): string
     {
-        return trim(preg_replace('/^@[A-Za-z][A-Za-z0-9_-]{1,63}[:,]?\s*/', '', trim($text)) ?? trim($text));
+        return u($text)->trim()->replaceMatches('/^@[A-Za-z][A-Za-z0-9_-]{1,63}[:,]?\s*/', '')->trim()->toString();
     }
 
     private function isStopCommand(string $instruction): bool
     {
-        return in_array(strtolower($instruction), ['stop', 'stop please', 'please stop', 'cancel', 'cancel run', 'interrupt', 'abort', 'arrete', 'arrête', 'annule', 'stoppe'], true);
+        return in_array(u($instruction)->lower()->toString(), ['stop', 'stop please', 'please stop', 'cancel', 'cancel run', 'interrupt', 'abort', 'arrete', 'arrête', 'annule', 'stoppe'], true);
     }
 
     private function isRetryCommand(string $instruction): bool
@@ -197,7 +199,7 @@ final readonly class MattermostInteractionHandler
         if (preg_match('/(?:deadline|due) in (\d+)\s*(minute|hour|day)s?/i', $text, $matches)) {
             $amount = min(365, max(1, (int) $matches[1]));
 
-            return new \DateTimeImmutable(sprintf('+%d %ss', $amount, strtolower($matches[2])));
+            return new \DateTimeImmutable(sprintf('+%d %ss', $amount, u($matches[2])->lower()));
         }
 
         return new \DateTimeImmutable('+'.$this->settings->taskDeadlineSeconds().' seconds');

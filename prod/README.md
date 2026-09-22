@@ -229,17 +229,18 @@ systemctl enable --now nginx
 systemctl restart nginx
 systemctl disable --now agentag-worker || true
 systemctl enable --now agentag-ack-worker
-systemctl enable --now agentag-worker@1 agentag-worker@2 agentag-worker@3 agentag-worker@4 agentag-worker@5 agentag-worker@6
+systemctl disable --now agentag-worker@5 agentag-worker@6 || true
+systemctl enable --now agentag-worker@1 agentag-worker@2 agentag-worker@3 agentag-worker@4
 ```
 
-The web process creates the pending task card immediately. The dedicated preparation worker then runs the ephemeral Luna/low model selector without waiting behind long jobs. The six `agentag-worker@N` instances execute tasks directly on the selected profile and allow six different chat threads to run at the same time. Adjust that number to match the VPS. AgentTag still serializes work inside one thread.
+The web process creates the pending task card immediately. The dedicated preparation worker then runs the ephemeral Luna/low model selector without waiting behind long jobs. The four `agentag-worker@N` instances execute tasks directly on the selected profile and allow four different chat threads to run at the same time. AgentTag still serializes work inside one thread.
 
 Check service state and HTTP endpoints:
 
 ```bash
 systemctl status php8.4-fpm --no-pager
 systemctl status nginx --no-pager
-systemctl status agentag-worker@1 agentag-worker@2 agentag-worker@3 agentag-worker@4 agentag-worker@5 agentag-worker@6 --no-pager
+systemctl status agentag-worker@1 agentag-worker@2 agentag-worker@3 agentag-worker@4 --no-pager
 systemctl status agentag-ack-worker --no-pager
 systemctl show agentag-worker@1 -p User -p Group -p Environment
 curl -i http://YOUR_DOMAIN_HERE/health
@@ -249,7 +250,7 @@ curl -i http://YOUR_DOMAIN_HERE/ready
 Check logs:
 
 ```bash
-journalctl -u agentag-ack-worker -u agentag-worker@1 -u agentag-worker@2 -u agentag-worker@3 -u agentag-worker@4 -u agentag-worker@5 -u agentag-worker@6 -f
+journalctl -u agentag-ack-worker -u agentag-worker@1 -u agentag-worker@2 -u agentag-worker@3 -u agentag-worker@4 -f
 tail -f /srv/agentag/app/var/log/prod.log
 tail -f /var/log/nginx/agentag.error.log
 tail -f /var/log/php8.4-fpm-agentag.slow.log
@@ -293,7 +294,7 @@ Restart services so PHP-FPM OPcache and the worker see the new code:
 ```bash
 systemctl restart php8.4-fpm
 systemctl restart agentag-ack-worker
-systemctl restart agentag-worker@1 agentag-worker@2 agentag-worker@3 agentag-worker@4 agentag-worker@5 agentag-worker@6
+systemctl restart agentag-worker@1 agentag-worker@2 agentag-worker@3 agentag-worker@4
 nginx -t && systemctl reload nginx
 ```
 

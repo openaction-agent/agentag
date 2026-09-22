@@ -6,6 +6,8 @@ use App\AgentTag\Agent\AgentProfile;
 use App\Entity\AgentRun;
 use App\Entity\ChatSession;
 
+use function Symfony\Component\String\u;
+
 final readonly class SessionContextSnapshotBuilder
 {
     public function __construct(private int $maxCharacters)
@@ -36,7 +38,7 @@ final readonly class SessionContextSnapshotBuilder
             'Relevant links/artifacts: none recorded.',
         ];
 
-        return $this->bound(implode("\n\n", $sections));
+        return $this->bound(u("\n\n")->join($sections)->toString());
     }
 
     private function formatThreadMessages(ChatThreadContext $threadContext): string
@@ -59,7 +61,7 @@ final readonly class SessionContextSnapshotBuilder
             $lines[] = '- (none)';
         }
 
-        return implode("\n", $lines);
+        return u("\n")->join($lines)->toString();
     }
 
     /**
@@ -82,33 +84,33 @@ final readonly class SessionContextSnapshotBuilder
             $lines[] = '- (none)';
         }
 
-        return implode("\n", $lines);
+        return u("\n")->join($lines)->toString();
     }
 
     private function singleLine(string $value, ?int $maxCharacters = null): string
     {
-        $value = preg_replace('/\s+/', ' ', trim($value)) ?? trim($value);
-        if (null !== $maxCharacters && mb_strlen($value) > $maxCharacters) {
-            $value = rtrim(mb_substr($value, 0, max(0, $maxCharacters - 1))).'…';
+        $value = u($value)->trim()->replaceMatches('/\s+/', ' ');
+        if (null !== $maxCharacters && $value->length() > $maxCharacters) {
+            $value = $value->slice(0, max(0, $maxCharacters - 1))->trimEnd()->append('…');
         }
 
-        return $value;
+        return $value->toString();
     }
 
     private function isTaskCard(string $message): bool
     {
-        return 1 === preg_match('/^>\s*(?:🟡|🔵|✅|❌|⏹️)\s+\*\*/u', trim($message));
+        return 1 === preg_match('/^>\s*(?:🟡|🔵|✅|❌|⏹️)\s+\*\*/u', u($message)->trim()->toString());
     }
 
     private function bound(string $snapshot): string
     {
-        if (strlen($snapshot) <= $this->maxCharacters) {
+        if (u($snapshot)->length() <= $this->maxCharacters) {
             return $snapshot;
         }
 
         $notice = sprintf("\n[Context truncated to %d characters.]", $this->maxCharacters);
-        $availableCharacters = max(0, $this->maxCharacters - strlen($notice));
+        $availableCharacters = max(0, $this->maxCharacters - u($notice)->length());
 
-        return substr($snapshot, 0, $availableCharacters).$notice;
+        return u($snapshot)->slice(0, $availableCharacters)->append($notice)->toString();
     }
 }

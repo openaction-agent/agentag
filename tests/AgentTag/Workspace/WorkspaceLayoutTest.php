@@ -17,7 +17,7 @@ final class WorkspaceLayoutTest extends TestCase
         self::assertSame('/srv/agentag/runs/run-123', $layout->runPath('run-123'));
         self::assertSame('/srv/agentag/artifacts/run-123', $layout->artifactsPath('run-123'));
         self::assertSame('/srv/agentag/artifacts/run-123/input-files', $layout->inputFilesPath('run-123'));
-        self::assertSame('/srv/agentag/runs/session-'.substr(sha1('mattermost:team:channel:thread'), 0, 16), $layout->sessionPath('mattermost:team:channel:thread'));
+        self::assertSame('/srv/agentag/runs/session-901324a4fa59005a', $layout->sessionPath('mattermost:team:channel:thread'));
     }
 
     public function testItRejectsRelativeRootPaths(): void

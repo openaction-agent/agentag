@@ -12,13 +12,13 @@ final class CodexTaskModelSelectorTest extends TestCase
 {
     public function testItUsesEphemeralLunaHighAndAConstrainedOutputSchema(): void
     {
-        $factory = new ModelSelectionProcessFactory('{"route":"terra-high","selection_reason":"Precise, verifiable bug fix."}');
+        $factory = new ModelSelectionProcessFactory('{"route":"sol-high","selection_reason":"Precise, verifiable bug fix."}');
         $selector = new CodexTaskModelSelector($factory, new AgentTagSettings('@Codex', '/tmp', modelSelectionModel: 'gpt-5.6-luna'));
 
         $selection = $selector->select('@Codex implement the billing fix');
 
-        self::assertSame('terra-high', $selection->route);
-        self::assertSame('gpt-5.6-terra', $selection->model);
+        self::assertSame('sol-high', $selection->route);
+        self::assertSame('gpt-5.6-sol', $selection->model);
         self::assertSame('high', $selection->effort);
         self::assertSame('Precise, verifiable bug fix.', $selection->reason);
         self::assertContains('gpt-5.6-luna', $factory->command);
@@ -41,17 +41,21 @@ final class CodexTaskModelSelectorTest extends TestCase
             'terra-xhigh',
             'terra-max',
             'sol-medium',
+            'sol-high',
             'sol-xhigh',
         ], $route['enum'] ?? null);
         self::assertStringContainsString('Minimize quota usage while preserving correctness, judgment, and completeness.', $factory->input);
         self::assertStringContainsString('Honor an explicit request for a model or route.', $factory->input);
         self::assertStringContainsString('health/model/skills check, or simple confirmation: luna-medium.', $factory->input);
         self::assertStringContainsString('Genuinely simple or deterministic work, excluding coding tasks, including linear status, assignment, labels, comments, or writing: luna-xhigh.', $factory->input);
-        self::assertStringContainsString('Always use terra-high, and no other route, for OpenAction MCP work, including manipulation and information retrieval.', $factory->input);
-        self::assertStringContainsString('Default for routine agentic, product behavior questions, multi-step tool work, and functional testing: terra-high.', $factory->input);
-        self::assertStringContainsString('Default for coding tasks, including specification writing, implementation, PR reviews, and technical diagnostics/debugging: terra-max.', $factory->input);
+        self::assertStringContainsString('OpenAction MCP manipulation or information retrieval that is not part of a coding task: terra-high.', $factory->input);
+        self::assertStringContainsString('Default for routine agentic, product behavior questions, and multi-step tool work: terra-high.', $factory->input);
+        self::assertStringContainsString('Functional testing: sol-high.', $factory->input);
+        self::assertStringContainsString('Default for coding tasks, including specification writing, implementation, PR reviews, and technical diagnostics/debugging: sol-high.', $factory->input);
         self::assertStringContainsString('Security-sensitive, architectural, high-blast-radius, highly ambiguous, uncertain, or exceptionally difficult/complex work: sol-xhigh.', $factory->input);
-        self::assertStringContainsString('Except for the OpenAction MCP rule above, multiple files, tool calls, MCP calls, and arithmetic do not alone justify escalation.', $factory->input);
+        self::assertStringContainsString('Apply the routes in this precedence order: explicit model request, sol-xhigh risk, coding or functional testing, OpenAction MCP-only work, then the remaining defaults.', $factory->input);
+        self::assertStringContainsString('$implement-issue and any request to implement a Linear issue are coding tasks and must use sol-high', $factory->input);
+        self::assertStringContainsString('Multiple files, tool calls, MCP calls, and arithmetic do not alone justify escalation.', $factory->input);
         self::assertStringContainsString('Escalate from Luna only when the work meets a Terra or Sol condition above;', $factory->input);
     }
 
@@ -67,6 +71,7 @@ final class CodexTaskModelSelectorTest extends TestCase
             'terra-xhigh' => ['gpt-5.6-terra', 'xhigh'],
             'terra-max' => ['gpt-5.6-terra', 'max'],
             'sol-medium' => ['gpt-5.6-sol', 'medium'],
+            'sol-high' => ['gpt-5.6-sol', 'high'],
             'sol-xhigh' => ['gpt-5.6-sol', 'xhigh'],
         ];
 

@@ -2,6 +2,8 @@
 
 namespace App\AgentTag\Mattermost;
 
+use function Symfony\Component\String\u;
+
 final readonly class MattermostApiSettings
 {
     private string $baseUrl;
@@ -13,7 +15,7 @@ final readonly class MattermostApiSettings
         private string $botToken,
         int $recentReplyLimit,
     ) {
-        $this->baseUrl = rtrim($baseUrl, '/');
+        $this->baseUrl = u($baseUrl)->trimEnd('/')->toString();
         $this->recentReplyLimit = max(1, min(100, $recentReplyLimit));
     }
 

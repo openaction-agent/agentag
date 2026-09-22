@@ -19,6 +19,8 @@ use Symfony\Component\Messenger\Exception\RecoverableMessageHandlingException;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Messenger\Stamp\DelayStamp;
 
+use function Symfony\Component\String\u;
+
 #[AsMessageHandler]
 final readonly class RunAgentRunMessageHandler
 {
@@ -130,7 +132,7 @@ final readonly class RunAgentRunMessageHandler
         $this->entityManager->refresh($run);
         $progressSink->finish();
         if (AgentRun::STATUS_WAITING === $run->status() && null !== $run->wakeAt()) {
-            $progressSink->milestone(sprintf('%s I’ll check again %s.', rtrim((string) $run->outputSummary()), $run->wakeAt()->format('Y-m-d H:i \U\T\C')));
+            $progressSink->milestone(sprintf('%s I’ll check again %s.', u((string) $run->outputSummary())->trimEnd(), $run->wakeAt()->format('Y-m-d H:i \U\T\C')));
             $this->schedule($run, max(1, $run->wakeAt()->getTimestamp() - time()));
         } elseif (AgentRun::STATUS_ACCEPTED === $run->status()) {
             $delay = AgentRun::INTERRUPT_STEER === $run->interruptionKind() ? 0 : $run->retryDelaySeconds();

@@ -10,6 +10,8 @@ use App\AgentTag\Runner\ProcessFactory;
 use App\AgentTag\Runner\RunnerProcess;
 use PHPUnit\Framework\TestCase;
 
+use function Symfony\Component\String\u;
+
 final class CodexCliRunnerTest extends TestCase
 {
     private string $workingDirectory;
@@ -108,13 +110,13 @@ final class CodexCliRunnerTest extends TestCase
     {
         $factory = new TraceableProcessFactory();
         $factory->writeLastMessage = false;
-        $factory->stdout = implode("\n", [
+        $factory->stdout = u("\n")->join([
             '{"type":"thread.started","thread_id":"thread-id"}',
             '{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"I am checking that now."}}',
             '{"type":"item.completed","item":{"id":"item_1","type":"command_execution","aggregated_output":"AGENTS.md\n","exit_code":0}}',
             '{"type":"item.completed","item":{"id":"item_2","type":"agent_message","text":"Final answer from JSONL."}}',
             '{"usage":{"input_tokens":12,"output_tokens":8}}',
-        ]);
+        ])->toString();
         $runner = new CodexCliRunner($factory);
 
         $result = $runner->run(new AgentRunnerInput(
@@ -135,11 +137,11 @@ final class CodexCliRunnerTest extends TestCase
     {
         $factory = new TraceableProcessFactory();
         $factory->writeLastMessage = false;
-        $factory->stdout = implode("\n", [
+        $factory->stdout = u("\n")->join([
             '{"type":"thread.started","thread_id":"thread-id"}',
             '{"type":"turn.started"}',
             '{"usage":{"input_tokens":12,"output_tokens":8}}',
-        ]);
+        ])->toString();
         $runner = new CodexCliRunner($factory);
 
         $result = $runner->run(new AgentRunnerInput(

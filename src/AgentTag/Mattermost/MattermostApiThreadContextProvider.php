@@ -8,6 +8,8 @@ use Symfony\Contracts\HttpClient\Exception\DecodingExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
+use function Symfony\Component\String\u;
+
 final readonly class MattermostApiThreadContextProvider implements MattermostThreadContextProvider
 {
     public function __construct(
@@ -183,6 +185,6 @@ final readonly class MattermostApiThreadContextProvider implements MattermostThr
             $userId = '';
         }
 
-        return new ChatThreadMessage($postId, trim((string) $userId), trim((string) $message));
+        return new ChatThreadMessage($postId, u((string) $userId)->trim()->toString(), u((string) $message)->trim()->toString());
     }
 }

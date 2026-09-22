@@ -6,6 +6,8 @@ use Psr\Log\LoggerInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
+use function Symfony\Component\String\u;
+
 final class MattermostApiNotifier implements MattermostNotifier
 {
     private ?string $botUserId = null;
@@ -99,7 +101,7 @@ final class MattermostApiNotifier implements MattermostNotifier
         $fileInfos = is_array($payload) ? ($payload['file_infos'] ?? null) : null;
         $firstFileInfo = is_array($fileInfos) ? ($fileInfos[0] ?? null) : null;
         $fileId = is_array($firstFileInfo) ? ($firstFileInfo['id'] ?? null) : null;
-        if (!is_string($fileId) || '' === trim($fileId)) {
+        if (!is_string($fileId) || '' === u($fileId)->trim()->toString()) {
             $this->logger?->warning('Mattermost file upload response did not contain a file ID.', [
                 'channel_id' => $event->channelId(),
                 'filename' => basename($path),
@@ -109,7 +111,7 @@ final class MattermostApiNotifier implements MattermostNotifier
             return null;
         }
 
-        return trim($fileId);
+        return u($fileId)->trim()->toString();
     }
 
     /**
@@ -119,13 +121,13 @@ final class MattermostApiNotifier implements MattermostNotifier
     #[\Override]
     public function createPost(MattermostInboundEvent $event, string $message, array $props = [], array $fileIds = []): ?string
     {
-        if (!$this->settings->enabled() || '' === trim($message)) {
+        if (!$this->settings->enabled() || '' === u($message)->trim()->toString()) {
             return null;
         }
 
         $payload = [
             'channel_id' => $event->channelId(),
-            'message' => trim($message),
+            'message' => u($message)->trim()->toString(),
         ];
         $rootId = $this->replyRootId($event);
         if ('' !== $rootId) {
@@ -204,11 +206,11 @@ final class MattermostApiNotifier implements MattermostNotifier
     #[\Override]
     public function updatePost(string $postId, string $message, array $props = []): bool
     {
-        if (!$this->settings->enabled() || '' === trim($postId) || '' === trim($message)) {
+        if (!$this->settings->enabled() || '' === u($postId)->trim()->toString() || '' === u($message)->trim()->toString()) {
             return false;
         }
 
-        $payload = ['message' => trim($message)];
+        $payload = ['message' => u($message)->trim()->toString()];
         if ([] !== $props) {
             $payload['props'] = $props;
         }
@@ -233,7 +235,7 @@ final class MattermostApiNotifier implements MattermostNotifier
         $payload = json_decode($response['body'], true);
         $postId = is_array($payload) ? ($payload['id'] ?? null) : null;
 
-        return is_string($postId) && '' !== trim($postId) ? trim($postId) : null;
+        return is_string($postId) && '' !== u($postId)->trim()->toString() ? u($postId)->trim()->toString() : null;
     }
 
     private function resolveThreadRootId(MattermostInboundEvent $event): ?string
@@ -281,13 +283,13 @@ final class MattermostApiNotifier implements MattermostNotifier
         }
 
         $rootId = $payload['root_id'] ?? null;
-        if (is_string($rootId) && '' !== trim($rootId)) {
-            return trim($rootId);
+        if (is_string($rootId) && '' !== u($rootId)->trim()->toString()) {
+            return u($rootId)->trim()->toString();
         }
 
         $postId = $payload['id'] ?? null;
-        if (is_string($postId) && '' !== trim($postId)) {
-            return trim($postId);
+        if (is_string($postId) && '' !== u($postId)->trim()->toString()) {
+            return u($postId)->trim()->toString();
         }
 
         return null;
@@ -345,7 +347,7 @@ final class MattermostApiNotifier implements MattermostNotifier
             return null;
         }
 
-        if (!is_array($payload) || !is_string($payload['id'] ?? null) || '' === trim($payload['id'])) {
+        if (!is_array($payload) || !is_string($payload['id'] ?? null) || '' === u($payload['id'])->trim()->toString()) {
             $this->logger?->debug('Mattermost API returned a bot user payload without an id before sending typing indicator.', [
                 'response_body' => $this->truncateResponseBody($response['body']),
             ]);
@@ -353,7 +355,7 @@ final class MattermostApiNotifier implements MattermostNotifier
             return null;
         }
 
-        $this->botUserId = trim($payload['id']);
+        $this->botUserId = u($payload['id'])->trim()->toString();
 
         return $this->botUserId;
     }
@@ -442,7 +444,7 @@ final class MattermostApiNotifier implements MattermostNotifier
             ...$extraContext,
         ];
 
-        $responseBody = trim($response['body']);
+        $responseBody = u($response['body'])->trim()->toString();
         if ('' !== $responseBody) {
             $context['response_body'] = $this->truncateResponseBody($responseBody);
         }
@@ -452,11 +454,11 @@ final class MattermostApiNotifier implements MattermostNotifier
 
     private function truncateResponseBody(string $body): string
     {
-        if (strlen($body) <= 2000) {
+        if (u($body)->length() <= 2000) {
             return $body;
         }
 
-        return substr($body, 0, 2000).'...';
+        return u($body)->slice(0, 2000)->append('...')->toString();
     }
 
     /**
@@ -468,8 +470,10 @@ final class MattermostApiNotifier implements MattermostNotifier
             return false;
         }
 
-        return str_contains($response['body'], 'api.post.create_post.root_id.app_error')
-            || str_contains($response['body'], 'Invalid RootId parameter');
+        return u($response['body'])->containsAny([
+            'api.post.create_post.root_id.app_error',
+            'Invalid RootId parameter',
+        ]);
     }
 
     /**
@@ -481,8 +485,10 @@ final class MattermostApiNotifier implements MattermostNotifier
             return false;
         }
 
-        return str_contains($response['body'], 'api.context.permissions.app_error')
-            || str_contains($response['body'], 'You do not have the appropriate permissions');
+        return u($response['body'])->containsAny([
+            'api.context.permissions.app_error',
+            'You do not have the appropriate permissions',
+        ]);
     }
 
     private function replyRootId(MattermostInboundEvent $event): string

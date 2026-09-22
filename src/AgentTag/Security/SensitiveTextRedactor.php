@@ -2,6 +2,8 @@
 
 namespace App\AgentTag\Security;
 
+use function Symfony\Component\String\u;
+
 final readonly class SensitiveTextRedactor
 {
     private const SECRET_ASSIGNMENT_PATTERN = '/(?P<key_quote>["\']?)\b(?P<name>authorization|api[_-]?key|access[_-]?token|refresh[_-]?token|token|secret|password|passwd|pwd)\b(?P=key_quote)(?P<spacing>\s*[:=]\s*)(?P<value>"[^"]*"|\'[^\']*\'|[^\s,;}]+)/i';
@@ -31,7 +33,7 @@ final readonly class SensitiveTextRedactor
         $text = $this->redactKnownPatterns($text);
         $text = $this->redactCustomPatterns($text);
 
-        $redacted = preg_replace_callback(
+        $redacted = u($text)->replaceMatches(
             self::SECRET_ASSIGNMENT_PATTERN,
             static fn (array $matches): string => sprintf(
                 '%s%s%s%s%s',
@@ -41,10 +43,9 @@ final readonly class SensitiveTextRedactor
                 self::stringMatch($matches, 'spacing'),
                 self::redactedAssignmentValue(self::stringMatch($matches, 'value')),
             ),
-            $text,
-        );
+        )->toString();
 
-        $text = $redacted ?? $text;
+        $text = $redacted;
 
         return $this->redactCustomPatterns($this->redactKnownPatterns($text));
     }
@@ -52,8 +53,7 @@ final readonly class SensitiveTextRedactor
     private function redactKnownPatterns(string $text): string
     {
         foreach (self::SECRET_PATTERNS as $pattern => $replacement) {
-            $redacted = preg_replace($pattern, $replacement, $text);
-            $text = $redacted ?? $text;
+            $text = u($text)->replaceMatches($pattern, $replacement)->toString();
         }
 
         return $text;
@@ -62,8 +62,7 @@ final readonly class SensitiveTextRedactor
     private function redactCustomPatterns(string $text): string
     {
         foreach ($this->customPatterns as $pattern) {
-            $redacted = preg_replace($pattern, '[REDACTED]', $text);
-            $text = $redacted ?? $text;
+            $text = u($text)->replaceMatches($pattern, '[REDACTED]')->toString();
         }
 
         return $text;
@@ -74,13 +73,13 @@ final readonly class SensitiveTextRedactor
      */
     private function parseCustomPatterns(string $customPatterns): array
     {
-        if ('' === trim($customPatterns)) {
+        if ('' === u($customPatterns)->trim()->toString()) {
             return [];
         }
 
         $patterns = [];
         foreach ($this->patternStrings($customPatterns) as $pattern) {
-            $pattern = trim($pattern);
+            $pattern = u($pattern)->trim()->toString();
             if ('' === $pattern) {
                 continue;
             }
@@ -97,8 +96,8 @@ final readonly class SensitiveTextRedactor
      */
     private function patternStrings(string $customPatterns): array
     {
-        $customPatterns = trim($customPatterns);
-        if (str_starts_with($customPatterns, '[')) {
+        $customPatterns = u($customPatterns)->trim()->toString();
+        if (u($customPatterns)->startsWith('[')) {
             $decoded = json_decode($customPatterns, true);
             if (!is_array($decoded)) {
                 throw new \InvalidArgumentException('AgentTag redaction patterns JSON must decode to a list of strings.');
@@ -116,7 +115,12 @@ final readonly class SensitiveTextRedactor
             return $patterns;
         }
 
-        return preg_split('/\R+/', $customPatterns) ?: [];
+        $patterns = [];
+        foreach (u($customPatterns)->split('/\R+/', flags: 0) as $pattern) {
+            $patterns[] = $pattern->toString();
+        }
+
+        return $patterns;
     }
 
     private function assertValidPattern(string $pattern): void
@@ -135,11 +139,11 @@ final readonly class SensitiveTextRedactor
 
     private static function redactedAssignmentValue(string $value): string
     {
-        if (str_starts_with($value, '"') && str_ends_with($value, '"')) {
+        if (u($value)->startsWith('"') && u($value)->endsWith('"')) {
             return '"[REDACTED]"';
         }
 
-        if (str_starts_with($value, "'") && str_ends_with($value, "'")) {
+        if (u($value)->startsWith("'") && u($value)->endsWith("'")) {
             return "'[REDACTED]'";
         }
 
