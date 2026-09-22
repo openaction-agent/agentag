@@ -353,7 +353,7 @@ class AgentRun
     public function modelSelection(): TaskModelSelection
     {
         return TaskModelSelection::fromRoute($this->modelRoute ?? '', $this->modelSelectionReason ?? '')
-            ?? TaskModelSelection::solMedium();
+            ?? TaskModelSelection::fallback();
     }
 
     public function hasModelSelection(): bool

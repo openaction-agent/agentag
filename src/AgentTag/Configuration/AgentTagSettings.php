@@ -10,7 +10,7 @@ final readonly class AgentTagSettings
         private string $tag,
         private string $workspacePath,
         private int $runTimeoutSeconds = 1200,
-        private string $modelSelectionModel = 'gpt-5.6-luna',
+        private string $modelSelectionModel = 'gpt-6-luna',
         private int $modelSelectionTimeoutSeconds = 20,
         private int $taskDeadlineSeconds = 86400,
         private int $maxRetries = 2,

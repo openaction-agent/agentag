@@ -16,7 +16,7 @@ final class AgentRunPromptBuilderTest extends TestCase
 
         $prompt = (new AgentRunPromptBuilder())->build($run);
 
-        self::assertStringContainsString('Complete the task directly in this Codex session.', $prompt);
+        self::assertStringContainsString('Complete the task directly in this session.', $prompt);
         self::assertStringContainsString('Do not delegate it to a subagent.', $prompt);
         self::assertStringNotContainsString('Model routing decision', $prompt);
     }

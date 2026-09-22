@@ -20,6 +20,7 @@ final readonly class AgentRunnerInput
         private ?\Closure $sessionStartedCallback = null,
         private string $model = 'gpt-5.6-luna',
         private string $reasoningEffort = 'max',
+        private string $runner = TaskModelSelection::RUNNER_CODEX,
     ) {
     }
 
@@ -86,5 +87,10 @@ final readonly class AgentRunnerInput
     public function reasoningEffort(): string
     {
         return $this->reasoningEffort;
+    }
+
+    public function runner(): string
+    {
+        return $this->runner;
     }
 }

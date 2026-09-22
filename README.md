@@ -1,18 +1,18 @@
 # AgentTag
 
-AgentTag is a self-hosted Symfony bot that delegates Mattermost threads to Codex. Each thread gets an isolated persistent workspace and one durable task whose status card evolves from acknowledgement through completion.
+AgentTag is a self-hosted Symfony bot that delegates Mattermost threads to Codex or Claude Code. Each thread gets an isolated persistent workspace and one durable task whose status card evolves from acknowledgement through completion.
 
 ## What it does
 
 - Accepts `@Codex` requests from a Mattermost outgoing webhook.
 - Immediately creates a Mattermost task card acknowledging receipt and showing that model selection is in progress.
-- Uses one ephemeral GPT-5.6 Luna call with low reasoning and a JSON output schema to select an appropriate Luna, Terra, or Sol profile.
+- Uses one ephemeral GPT-6 Luna call with max reasoning and a JSON output schema to select a GPT-6 (Codex) or Claude Opus 5.5 (Claude Code) profile.
 - Creates one Mattermost task card and updates it instead of streaming commands or harness events.
 - Renders the entire evolving task card as one blockquote so the separately posted answer is visually distinct.
 - Shows one Stop button while work is active, keeps the completed step timeline, then posts the answer after it.
 - Runs the task directly on the selected model and mirrors its meaningful progress messages into the task card.
-- Treats new messages during a task as steering for the same Codex session.
-- Persists Codex session UUIDs and resumes them after steering, scheduled wakeups, retries, or worker restarts.
+- Treats new messages during a task as steering for the same Codex or Claude Code session.
+- Persists session UUIDs and resumes them after steering, scheduled wakeups, retries, or worker restarts.
 - Supports waiting for CI, reviews, schedules, and other external state through durable Messenger wakeups.
 - Downloads files attached to task messages into each run's read-only input directory for Codex to inspect.
 - Uploads completed files from each run's reply outbox and attaches them to the final Mattermost post.
@@ -25,6 +25,7 @@ AgentTag is Mattermost-only. Slack, global memory, approvals, and the web admin 
 
 - PHP 8.4, Composer, PostgreSQL 16 or compatible.
 - Codex CLI installed and authenticated for the worker’s Unix user.
+- Claude Code CLI installed and authenticated for the worker’s Unix user (`claude` login or `ANTHROPIC_API_KEY`), with the Linear and Sentry MCP servers added at user scope (`claude mcp add -s user --transport http linear https://mcp.linear.app/mcp`) and authenticated once through `/mcp`.
 - A Mattermost bot token and outgoing webhook token.
 - One Symfony web process, one high-priority model-selection worker, and one or more task workers.
 - A workspace template containing your `AGENTS.md`, skills, plugins, and shared documentation.
@@ -44,10 +45,11 @@ AGENTAG_TAG=@Codex
 AGENTAG_WORKSPACE_PATH=/srv/agentag/workspace
 AGENTAG_CONTEXT_MAX_CHARS=12000
 AGENTAG_RUN_TIMEOUT_SECONDS=1200
+AGENTAG_CLAUDE_BINARY=/root/.local/bin/claude
 AGENTAG_REDACTION_PATTERNS=
 
-AGENTAG_MODEL_SELECTION_MODEL=gpt-5.6-luna
-AGENTAG_MODEL_SELECTION_TIMEOUT_SECONDS=20
+AGENTAG_MODEL_SELECTION_MODEL=gpt-6-luna
+AGENTAG_MODEL_SELECTION_TIMEOUT_SECONDS=30
 AGENTAG_TASK_DEADLINE_SECONDS=86400
 AGENTAG_MAX_RETRIES=2
 AGENTAG_RETRY_DELAY_SECONDS=60
@@ -72,15 +74,28 @@ url = "https://administrer.lesecologistes.fr/mcp"
 startup_timeout_sec = 60
 ```
 
-AgentTag posts a warning in the Mattermost thread whenever Codex reports an MCP startup failure. The task continues without that server's tools, and the warning intentionally omits the raw error detail to avoid exposing credentials or endpoint internals.
+AgentTag posts a warning in the Mattermost thread whenever Codex or Claude Code reports an MCP startup failure (including a Claude Code server that needs authentication). The task continues without that server's tools, and the warning intentionally omits the raw error detail to avoid exposing credentials or endpoint internals.
 
 `DEFAULT_URI` must be the public AgentTag origin. Mattermost uses it to call `/integrations/mattermost/action` when a user clicks a task-card button. If AgentTag is on a private address, allow that address in Mattermost’s `AllowedUntrustedInternalConnections` setting.
 
 `AGENTAG_NOTIFICATION_PREFERENCE` accepts `all`, `milestones`, or `completion`. Users can override it per task with phrases such as “notify me only when complete” or “notify me on every update.” A request can set a shorter deadline with “deadline in 3 hours” (minutes, hours, and days are supported).
 
-The webhook posts the initial task card before any Codex call. The preparation worker then calls Codex with `--ephemeral`, `gpt-5.6-luna`, low reasoning, and `--output-schema`. The router minimizes quota usage by sending simple work to Luna and routine agentic or OpenAction MCP-only work to Terra. Coding tasks—including Linear issue implementations—and functional testing use Sol/high, even when their workflow also uses Linear, GitHub, or other OpenAction MCP tools. Sensitive, architectural, or exceptionally complex work uses Sol/xhigh. Explicit model requests are honored. If selection times out, fails, or returns an invalid route, AgentTag safely falls back to Sol/medium and still queues the task.
+The webhook posts the initial task card before any model call. The preparation worker then calls Codex with `--ephemeral`, `gpt-6-luna`, max reasoning, and `--output-schema` to pick one route for the whole thread:
 
-The selected model and reasoning effort are persisted on the run and passed directly to `codex exec` and `codex exec resume`; the task process does not delegate to another agent. The task card shows the selected profile and rationale before execution. The main task follows the workspace’s French-or-English response policy.
+| Route | Harness | Used for |
+|---|---|---|
+| `gpt-6-luna-medium` | Codex | Control and meta messages (stop, ping, access checks). |
+| `opus-5-5-medium` | Claude Code | Default for technical implementation, code changes on PRs, specs, porting/rebasing, and infrastructure. |
+| `opus-5-5-high` | Claude Code | Epic-scale or multi-issue implementation. |
+| `gpt-6-astra-medium` | Codex | Code review, and review combined with fixing the code. |
+| `gpt-6-sol-high` | Codex | Everything else: validation, diagnosis, product questions, Linear and instance operations, writing. |
+| `gpt-6-sol-max`, `gpt-6-astra-max`, `opus-5-5-max` | Codex / Claude Code | Only when explicitly requested. |
+
+Explicit model requests are honored. If selection times out, fails, or returns an invalid route, AgentTag falls back to `gpt-6-sol-high` and still queues the task. Threads routed before the GPT-6 routing keep their original GPT-5.6 profile.
+
+Claude Code runs use `claude --print --output-format stream-json --verbose --dangerously-skip-permissions` with `IS_SANDBOX=1`, which Claude Code requires to skip permission prompts as root; this mirrors the Codex runner's full-access mode. Before each Claude Code run, AgentTag links the workspace's `.agents/skills` as `.claude/skills` and adds a `CLAUDE.md` that imports `AGENTS.md`, so both harnesses share the same instructions and skills.
+
+The selected model and reasoning effort are persisted on the run and passed directly to `codex exec`/`codex exec resume` or `claude --print`/`claude --print --resume`; the task process does not delegate to another agent. The task card shows the selected profile and rationale before execution. The main task follows the workspace’s French-or-English response policy.
 
 ## Workspace layout
 

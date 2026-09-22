@@ -64,8 +64,9 @@ final readonly class AgentRunOrchestrator
 
         $run->markRunning();
         $this->entityManager->flush();
-        $this->runEventRecorder?->record($run, null === $run->codexThreadId() ? RunEvent::TYPE_RUNNER_STARTED : RunEvent::TYPE_TASK_RESUMED, null === $run->codexThreadId() ? 'Started agent runner.' : 'Resumed Codex task session.', [
+        $this->runEventRecorder?->record($run, null === $run->codexThreadId() ? RunEvent::TYPE_RUNNER_STARTED : RunEvent::TYPE_TASK_RESUMED, null === $run->codexThreadId() ? 'Started agent runner.' : 'Resumed agent task session.', [
             'runner_mode' => $runnerMode,
+            'runner' => $run->modelSelection()->runner,
             'timeout_seconds' => $timeoutSeconds,
         ]);
         $this->logger?->info('Starting agent runner.', [
@@ -92,6 +93,7 @@ final readonly class AgentRunOrchestrator
             },
             $modelSelection->model,
             $modelSelection->effort,
+            $modelSelection->runner,
         ));
 
         if (null !== $result->sessionId()) {

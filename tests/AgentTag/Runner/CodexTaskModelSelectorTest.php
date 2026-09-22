@@ -10,19 +10,20 @@ use PHPUnit\Framework\TestCase;
 
 final class CodexTaskModelSelectorTest extends TestCase
 {
-    public function testItUsesEphemeralLunaHighAndAConstrainedOutputSchema(): void
+    public function testItUsesEphemeralLunaMaxAndAConstrainedOutputSchema(): void
     {
-        $factory = new ModelSelectionProcessFactory('{"route":"sol-high","selection_reason":"Precise, verifiable bug fix."}');
-        $selector = new CodexTaskModelSelector($factory, new AgentTagSettings('@Codex', '/tmp', modelSelectionModel: 'gpt-5.6-luna'));
+        $factory = new ModelSelectionProcessFactory('{"route":"opus-5-5-medium","selection_reason":"Precise, verifiable bug fix."}');
+        $selector = new CodexTaskModelSelector($factory, new AgentTagSettings('@Codex', '/tmp', modelSelectionModel: 'gpt-6-luna'));
 
         $selection = $selector->select('@Codex implement the billing fix');
 
-        self::assertSame('sol-high', $selection->route);
-        self::assertSame('gpt-5.6-sol', $selection->model);
-        self::assertSame('high', $selection->effort);
+        self::assertSame('opus-5-5-medium', $selection->route);
+        self::assertSame('claude', $selection->runner);
+        self::assertSame('claude-opus-5-5', $selection->model);
+        self::assertSame('medium', $selection->effort);
         self::assertSame('Precise, verifiable bug fix.', $selection->reason);
-        self::assertContains('gpt-5.6-luna', $factory->command);
-        self::assertContains('model_reasoning_effort="high"', $factory->command);
+        self::assertContains('gpt-6-luna', $factory->command);
+        self::assertContains('model_reasoning_effort="max"', $factory->command);
         self::assertContains('--ephemeral', $factory->command);
         self::assertContains('--output-schema', $factory->command);
         $schema = json_decode($factory->schema, true, flags: \JSON_THROW_ON_ERROR);
@@ -32,50 +33,40 @@ final class CodexTaskModelSelectorTest extends TestCase
         $route = $properties['route'] ?? null;
         self::assertIsArray($route);
         self::assertSame([
-            'luna-high',
-            'luna-max',
-            'luna-medium',
-            'luna-xhigh',
-            'terra-medium',
-            'terra-high',
-            'terra-xhigh',
-            'terra-max',
-            'sol-medium',
-            'sol-high',
-            'sol-xhigh',
+            'gpt-6-luna-medium',
+            'gpt-6-sol-high',
+            'gpt-6-sol-max',
+            'gpt-6-astra-medium',
+            'gpt-6-astra-max',
+            'opus-5-5-medium',
+            'opus-5-5-high',
+            'opus-5-5-max',
         ], $route['enum'] ?? null);
-        self::assertStringContainsString('Minimize quota usage while preserving correctness, judgment, and completeness.', $factory->input);
         self::assertStringContainsString('Honor an explicit request for a model or route.', $factory->input);
-        self::assertStringContainsString('health/model/skills check, or simple confirmation: luna-medium.', $factory->input);
-        self::assertStringContainsString('Genuinely simple or deterministic work, excluding coding tasks, including linear status, assignment, labels, comments, or writing: luna-xhigh.', $factory->input);
-        self::assertStringContainsString('OpenAction MCP manipulation or information retrieval that is not part of a coding task: terra-high.', $factory->input);
-        self::assertStringContainsString('Default for routine agentic, product behavior questions, and multi-step tool work: terra-high.', $factory->input);
-        self::assertStringContainsString('Functional testing: sol-high.', $factory->input);
-        self::assertStringContainsString('Default for coding tasks, including specification writing, implementation, PR reviews, and technical diagnostics/debugging: sol-high.', $factory->input);
-        self::assertStringContainsString('Security-sensitive, architectural, high-blast-radius, highly ambiguous, uncertain, or exceptionally difficult/complex work: sol-xhigh.', $factory->input);
-        self::assertStringContainsString('Apply the routes in this precedence order: explicit model request, sol-xhigh risk, coding or functional testing, OpenAction MCP-only work, then the remaining defaults.', $factory->input);
-        self::assertStringContainsString('$implement-issue and any request to implement a Linear issue are coding tasks and must use sol-high', $factory->input);
-        self::assertStringContainsString('Multiple files, tool calls, MCP calls, and arithmetic do not alone justify escalation.', $factory->input);
-        self::assertStringContainsString('Escalate from Luna only when the work meets a Terra or Sol condition above;', $factory->input);
+        self::assertStringContainsString('gpt-6-sol-max, gpt-6-astra-max and opus-5-5-max are used only when explicitly requested.', $factory->input);
+        self::assertStringContainsString('- gpt-6-luna-medium: control and meta messages only', $factory->input);
+        self::assertStringContainsString('- opus-5-5-medium: default for technical implementation and specification writing:', $factory->input);
+        self::assertStringContainsString('- opus-5-5-high: large-scale implementation spanning a whole epic', $factory->input);
+        self::assertStringContainsString('- gpt-6-astra-medium: code review of a PR', $factory->input);
+        self::assertStringContainsString('- gpt-6-sol-high: everything else, including:', $factory->input);
+        self::assertStringContainsString('Precedence: explicit model or route request, then opus-5-5-high, then gpt-6-astra-medium, then opus-5-5-medium, then gpt-6-luna-medium, then gpt-6-sol-high.', $factory->input);
+        self::assertStringEndsWith("User request:\n@Codex implement the billing fix", $factory->input);
     }
 
     public function testItSupportsEveryRoutingProfile(): void
     {
         $profiles = [
-            'luna-high' => ['gpt-5.6-luna', 'high'],
-            'luna-max' => ['gpt-5.6-luna', 'max'],
-            'luna-medium' => ['gpt-5.6-luna', 'medium'],
-            'luna-xhigh' => ['gpt-5.6-luna', 'xhigh'],
-            'terra-medium' => ['gpt-5.6-terra', 'medium'],
-            'terra-high' => ['gpt-5.6-terra', 'high'],
-            'terra-xhigh' => ['gpt-5.6-terra', 'xhigh'],
-            'terra-max' => ['gpt-5.6-terra', 'max'],
-            'sol-medium' => ['gpt-5.6-sol', 'medium'],
-            'sol-high' => ['gpt-5.6-sol', 'high'],
-            'sol-xhigh' => ['gpt-5.6-sol', 'xhigh'],
+            'gpt-6-luna-medium' => ['codex', 'gpt-6-luna', 'medium'],
+            'gpt-6-sol-high' => ['codex', 'gpt-6-sol', 'high'],
+            'gpt-6-sol-max' => ['codex', 'gpt-6-sol', 'max'],
+            'gpt-6-astra-medium' => ['codex', 'gpt-6-astra', 'medium'],
+            'gpt-6-astra-max' => ['codex', 'gpt-6-astra', 'max'],
+            'opus-5-5-medium' => ['claude', 'claude-opus-5-5', 'medium'],
+            'opus-5-5-high' => ['claude', 'claude-opus-5-5', 'high'],
+            'opus-5-5-max' => ['claude', 'claude-opus-5-5', 'max'],
         ];
 
-        foreach ($profiles as $route => [$model, $effort]) {
+        foreach ($profiles as $route => [$runner, $model, $effort]) {
             $factory = new ModelSelectionProcessFactory(json_encode([
                 'route' => $route,
                 'selection_reason' => 'Test selection.',
@@ -85,43 +76,42 @@ final class CodexTaskModelSelectorTest extends TestCase
             $selection = $selector->select('route this request');
 
             self::assertSame($route, $selection->route);
+            self::assertSame($runner, $selection->runner);
             self::assertSame($model, $selection->model);
             self::assertSame($effort, $selection->effort);
         }
     }
 
-    public function testItSupportsLunaMediumForExtremelySimpleTasks(): void
+    public function testItRejectsLegacyRoutesFromTheSelector(): void
     {
-        $factory = new ModelSelectionProcessFactory('{"route":"luna-medium","selection_reason":"Simple agent status check."}');
+        $factory = new ModelSelectionProcessFactory('{"route":"terra-high","selection_reason":"Legacy route."}');
         $selector = new CodexTaskModelSelector($factory, new AgentTagSettings('@Codex', '/tmp'));
 
-        $selection = $selector->select('check the current agent status');
+        $selection = $selector->select('inspect this');
 
-        self::assertSame('luna-medium', $selection->route);
-        self::assertSame('gpt-5.6-luna', $selection->model);
-        self::assertSame('medium', $selection->effort);
-        self::assertSame('Simple agent status check.', $selection->reason);
+        self::assertSame('gpt-6-sol-high', $selection->route);
+        self::assertSame('The model selector was unavailable, so the general-purpose route was used.', $selection->reason);
     }
 
-    public function testItUsesSolMediumWhenTheGeneratedRouteIsInvalid(): void
+    public function testItUsesTheFallbackRouteWhenTheGeneratedRouteIsInvalid(): void
     {
         $factory = new ModelSelectionProcessFactory('{"route":"unknown","selection_reason":"Unclear."}');
         $selector = new CodexTaskModelSelector($factory, new AgentTagSettings('@Codex', '/tmp'));
 
         $selection = $selector->select('inspect this');
 
-        self::assertSame('sol-medium', $selection->route);
-        self::assertSame('gpt-5.6-sol', $selection->model);
-        self::assertSame('medium', $selection->effort);
+        self::assertSame('gpt-6-sol-high', $selection->route);
+        self::assertSame('gpt-6-sol', $selection->model);
+        self::assertSame('high', $selection->effort);
     }
 
-    public function testItUsesSolMediumWhenTheClassifierOutputIsNotJson(): void
+    public function testItUsesTheFallbackRouteWhenTheClassifierOutputIsNotJson(): void
     {
         $selector = new CodexTaskModelSelector(new ModelSelectionProcessFactory('not-json'), new AgentTagSettings('@Codex', '/tmp'));
 
         $selection = $selector->select('@Codex haz algo');
 
-        self::assertSame('sol-medium', $selection->route);
+        self::assertSame('gpt-6-sol-high', $selection->route);
         self::assertSame('The model selector was unavailable, so the general-purpose route was used.', $selection->reason);
     }
 }

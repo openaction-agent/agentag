@@ -81,7 +81,11 @@ services:
             $githubPatToken: '%env(string:GITHUB_PAT_TOKEN)%'
 
     App\AgentTag\Runner\AgentRunnerInterface:
-        alias: App\AgentTag\Runner\CodexCliRunner
+        alias: App\AgentTag\Runner\RoutingAgentRunner
+
+    App\AgentTag\Runner\ClaudeCodeRunner:
+        arguments:
+            $binary: '%env(string:AGENTAG_CLAUDE_BINARY)%'
 
     App\AgentTag\Session\SessionContextSnapshotBuilder:
         arguments:
